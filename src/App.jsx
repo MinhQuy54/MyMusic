@@ -287,6 +287,7 @@ export default function App() {
               step="0.01"
               value={volume}
               onChange={(e) => setVolume(Number(e.target.value))}
+              onInput={(e) => setVolume(Number(e.target.value))}
               style={{ '--progress': `${volume * 100}%` }}
               aria-label="Âm lượng"
             />

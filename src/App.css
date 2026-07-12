@@ -181,9 +181,20 @@ input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
-  height: 6px;
+  height: 20px;          /* vùng bắt click/touch lớn */
   border-radius: 999px;
   border: none;
+  background: transparent;  /* gradient đặt ở track pseudo-element */
+  cursor: pointer;
+  outline: none;
+  touch-action: none;
+}
+input[type='range']::-webkit-slider-container {
+  height: 20px;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
   background: linear-gradient(
     to right,
     var(--gold) 0%,
@@ -191,31 +202,45 @@ input[type='range'] {
     rgba(255, 255, 255, 0.18) var(--progress, 0%),
     rgba(255, 255, 255, 0.18) 100%
   );
-  cursor: pointer;
-  outline: none;
 }
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
   border: none;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 217, 142, 0.55);
   transition: transform 0.15s ease;
+  cursor: grab;
+  margin-top: -7.5px;   /* căn giữa thumb theo track 5px */
 }
 input[type='range']::-webkit-slider-thumb:active {
   transform: scale(1.25);
+  cursor: grabbing;
+}
+input[type='range']::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--gold) 0%,
+    var(--gold-deep) var(--progress, 0%),
+    rgba(255, 255, 255, 0.18) var(--progress, 0%),
+    rgba(255, 255, 255, 0.18) 100%
+  );
 }
 input[type='range']::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
   border: none;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 217, 142, 0.55);
+  cursor: grab;
 }
+
 
 /* ── controls ── */
 .controls {
