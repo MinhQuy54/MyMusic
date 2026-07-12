@@ -13,6 +13,8 @@ export default function App() {
   const lyricsBoxRef = useRef(null)
   const lineRefs = useRef([])
   const rafRef = useRef(0)
+  const audioCtxRef = useRef(null)
+  const gainRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -99,8 +101,30 @@ export default function App() {
     return () => cancelAnimationFrame(rafRef.current)
   }, [isPlaying])
 
+  // iOS không cho JS chỉnh audio.volume (thuộc tính bị khoá), nên khi bắt đầu
+  // phát ta route audio qua GainNode của Web Audio API và chỉnh gain thay thế
+  const ensureAudioGraph = () => {
+    const audio = audioRef.current
+    if (!audio || gainRef.current) return
+    const Ctx = window.AudioContext || window.webkitAudioContext
+    if (!Ctx) return
+    const ctx = new Ctx()
+    const source = ctx.createMediaElementSource(audio)
+    const gain = ctx.createGain()
+    gain.gain.value = volume
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    audio.volume = 1
+    audioCtxRef.current = ctx
+    gainRef.current = gain
+  }
+
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume
+    if (gainRef.current) {
+      gainRef.current.gain.value = volume
+    } else if (audioRef.current) {
+      audioRef.current.volume = volume
+    }
   }, [volume])
 
 
@@ -125,6 +149,8 @@ export default function App() {
       audio.pause()
       setIsPlaying(false)
     } else {
+      ensureAudioGraph()
+      audioCtxRef.current?.resume()
       audio.play()
       setIsPlaying(true)
     }
@@ -147,6 +173,8 @@ export default function App() {
     seekTo(Math.max(LYRICS[index].time, 0))
     const audio = audioRef.current
     if (audio && !isPlaying) {
+      ensureAudioGraph()
+      audioCtxRef.current?.resume()
       audio.play()
       setIsPlaying(true)
     }
