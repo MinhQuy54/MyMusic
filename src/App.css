@@ -187,7 +187,7 @@ input[type='range'] {
   background: transparent;  /* gradient đặt ở track pseudo-element */
   cursor: pointer;
   outline: none;
-  touch-action: none;
+  touch-action: pan-x;
 }
 input[type='range']::-webkit-slider-container {
   height: 20px;

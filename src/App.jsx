@@ -217,6 +217,7 @@ export default function App() {
               step="0.1"
               value={currentTime}
               onChange={(e) => seekTo(Number(e.target.value))}
+              onTouchStart={(e) => e.stopPropagation()}
               style={{ '--progress': `${progress}%` }}
               aria-label="Tua nhạc"
             />
@@ -287,6 +288,7 @@ export default function App() {
               value={volume}
               onChange={(e) => setVolume(Number(e.target.value))}
               onInput={(e) => setVolume(Number(e.target.value))}
+              onTouchStart={(e) => e.stopPropagation()}
               style={{ '--progress': `${volume * 100}%` }}
               aria-label="Âm lượng"
             />
