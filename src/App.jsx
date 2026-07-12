@@ -205,7 +205,6 @@ export default function App() {
 
           <div className="song-info">
             <h1 className="title">🌙</h1>
-            <p className="artist">Yum</p>
           </div>
 
           <div className="seek-row">
