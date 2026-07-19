@@ -1,5 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import LYRICS from './lyrics.js'
+import LYRICS_1 from './lyrics.js'
+import LYRICS_2 from './lyrics2.js'
+
+const SONGS = [
+  {
+    id: 1,
+    title: 'Gửi anh xa nhớ 🌙',
+    src: '/song.mp3',
+    cover: '/cover.png',
+    lyrics: LYRICS_1,
+  },
+  {
+    id: 2,
+    title: 'Tình yêu mùa đông ❄️',
+    src: '/song2.mp3',
+    cover: '/cover2.png',
+    lyrics: LYRICS_2,
+  },
+]
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return '0:00'
@@ -15,12 +33,18 @@ export default function App() {
   const rafRef = useRef(0)
   const audioCtxRef = useRef(null)
   const gainRef = useRef(null)
+  // track whether we've already connected the MediaElementSource (can only do once)
+  const sourceConnectedRef = useRef(false)
+  const [songIndex, setSongIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.8)
   const [isLoading, setIsLoading] = useState(false)
   const [prevVolume, setPrevVolume] = useState(0.8)
+
+  const song = SONGS[songIndex]
+  const LYRICS = song.lyrics
 
   const toggleMute = () => {
     if (volume > 0) {
@@ -30,7 +54,6 @@ export default function App() {
       setVolume(prevVolume)
     }
   }
-
 
   // dòng lyric đang hát: dòng cuối cùng có time <= currentTime
   let activeIndex = -1
@@ -87,7 +110,7 @@ export default function App() {
       audio.removeEventListener('seeking', onSeeking)
       audio.removeEventListener('seeked', onSeeked)
     }
-  }, [])
+  }, [songIndex])
 
   // khi đang phát: cập nhật mượt bằng requestAnimationFrame để chữ karaoke chảy đều
   useEffect(() => {
@@ -102,21 +125,29 @@ export default function App() {
   }, [isPlaying])
 
   // iOS không cho JS chỉnh audio.volume (thuộc tính bị khoá), nên khi bắt đầu
-  // phát ta route audio qua GainNode của Web Audio API và chỉnh gain thay thế
+  // phát ta route audio qua GainNode của Web Audio API và chỉnh gain thay thế.
+  // QUAN TRỌNG: createMediaElementSource chỉ được gọi MỘT LẦN duy nhất trên
+  // cùng 1 <audio> element — sau đó giữ nguyên graph, chỉ thay audio.src.
   const ensureAudioGraph = () => {
     const audio = audioRef.current
-    if (!audio || gainRef.current) return
-    const Ctx = window.AudioContext || window.webkitAudioContext
-    if (!Ctx) return
-    const ctx = new Ctx()
-    const source = ctx.createMediaElementSource(audio)
-    const gain = ctx.createGain()
-    gain.gain.value = volume
-    source.connect(gain)
-    gain.connect(ctx.destination)
-    audio.volume = 1
-    audioCtxRef.current = ctx
-    gainRef.current = gain
+    if (!audio) return
+    // Tạo context lần đầu
+    if (!audioCtxRef.current) {
+      const Ctx = window.AudioContext || window.webkitAudioContext
+      if (!Ctx) return
+      audioCtxRef.current = new Ctx()
+    }
+    // Kết nối MediaElementSource một lần duy nhất
+    if (!sourceConnectedRef.current) {
+      const gain = audioCtxRef.current.createGain()
+      gain.gain.value = volume
+      const source = audioCtxRef.current.createMediaElementSource(audio)
+      source.connect(gain)
+      gain.connect(audioCtxRef.current.destination)
+      audio.volume = 1
+      gainRef.current = gain
+      sourceConnectedRef.current = true
+    }
   }
 
   useEffect(() => {
@@ -127,10 +158,7 @@ export default function App() {
     }
   }, [volume])
 
-
-
   // tự cuộn để dòng mới nhất luôn nằm trong khung
-  // (nhảy xa — tua nhạc/mở trang giữa bài — thì cuộn thẳng, không smooth)
   const prevIndexRef = useRef(-1)
   useEffect(() => {
     const box = lyricsBoxRef.current
@@ -180,6 +208,33 @@ export default function App() {
     }
   }
 
+  const switchSong = (index) => {
+    if (index === songIndex) return
+    const audio = audioRef.current
+    if (audio) {
+      audio.pause()
+    }
+    // Chỉ reset state phát nhạc — KHÔNG reset AudioContext/GainNode
+    // vì MediaElementSource đã được kết nối và không thể kết nối lại
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+    setIsLoading(false)
+    prevIndexRef.current = -1
+    lineRefs.current = []
+    setSongIndex(index)
+  }
+
+  // When song changes, update audio src and reload
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.src = SONGS[songIndex].src
+    audio.load()
+    setCurrentTime(0)
+    setDuration(0)
+  }, [songIndex])
+
   const progress = duration ? (currentTime / duration) * 100 : 0
 
   return (
@@ -187,6 +242,24 @@ export default function App() {
       <div className="floaties" aria-hidden="true">
         <span>⭐</span><span>💌</span><span>🐈‍⬛</span><span>♪</span>
         <span>✨</span><span>🎶</span><span>💫</span><span>♬</span>
+      </div>
+
+      {/* ── Song Switcher ── */}
+      <div className="song-switcher">
+        {SONGS.map((s, i) => (
+          <button
+            key={s.id}
+            className={`switch-btn ${i === songIndex ? 'active' : ''}`}
+            onClick={() => switchSong(i)}
+            title={`${s.title} - ${s.artist}`}
+          >
+            <span className="switch-emoji">{s.emoji}</span>
+            <span className="switch-label">
+              <span className="switch-title">{s.title}</span>
+              <span className="switch-artist">{s.artist}</span>
+            </span>
+          </button>
+        ))}
       </div>
 
       <div className="player-box">
@@ -197,7 +270,7 @@ export default function App() {
         {/* ── lời bài hát ── */}
         <section className="lyrics-pane">
           <div className="lyrics-header">
-            <span>💌 Lời bài hát</span>
+            <span>{song.emoji} Lời bài hát</span>
           </div>
           <div className="lyrics-scroll" ref={lyricsBoxRef}>
             {activeIndex < 0 && (
@@ -227,12 +300,12 @@ export default function App() {
         {/* ── player ── */}
         <section className="player-pane">
           <div className={`cover-wrap ${isPlaying ? 'playing' : ''}`}>
-            <img src="/cover.png" alt="Cô bé và chú mèo đen dưới cơn mưa sao" className="cover" />
+            <img src={song.cover} alt={song.title} className="cover" />
             <div className="cover-badge">{isPlaying ? '♪ đang phát ♪' : 'tạm dừng zzz'}</div>
           </div>
 
           <div className="song-info">
-            <h1 className="title">🌙</h1>
+            <h1 className="title">{song.emoji} {song.title}</h1>
           </div>
 
           <div className="seek-row">
@@ -323,7 +396,7 @@ export default function App() {
           </div>
         </section>
 
-        <audio ref={audioRef} src="/song.mp3" preload="metadata" playsInline />
+        <audio ref={audioRef} preload="metadata" playsInline />
       </div>
 
       <p className="footer">made with 💛 · MusicYum</p>
