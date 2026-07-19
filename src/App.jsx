@@ -26,6 +26,7 @@ function formatTime(seconds) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+
 export default function App() {
   const audioRef = useRef(null)
   const lyricsBoxRef = useRef(null)
